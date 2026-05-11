@@ -1,31 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { api, type Department } from '../lib/api';
 
 export function DepartmentManagement() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All Departments');
 
-  const departments = [
-    { name: 'Alta Verapaz', code: '16' },
-    { name: 'Baja Verapaz', code: '15' },
-    { name: 'Chimaltenango', code: '04' },
-    { name: 'Chiquimula', code: '20' },
-    { name: 'El Progreso', code: '02' },
-    { name: 'Escuintla', code: '05' },
-    { name: 'Guatemala', code: '01' },
-    { name: 'Huehuetenango', code: '13' },
-    { name: 'Izabal', code: '18' },
-    { name: 'Jalapa', code: '21' },
-    { name: 'Jutiapa', code: '22' },
-    { name: 'Petén', code: '17' },
-    { name: 'Quetzaltenango', code: '09' },
-    { name: 'Quiché', code: '14' },
-    { name: 'Retalhuleu', code: '11' },
-  ];
+  useEffect(() => {
+    api.get<Department[]>('/api/v1/management/departments')
+      .then(setDepartments)
+      .catch(err => setError(err instanceof Error ? err.message : 'Error al cargar departamentos'))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const filtered = departments.filter(d =>
-    d.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = departments.filter(d => {
+    const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
+    const matchFilter =
+      filter === 'All Departments' ||
+      (filter === 'Active' && d.is_active) ||
+      (filter === 'Inactive' && !d.is_active);
+    return matchSearch && matchFilter;
+  });
 
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -57,7 +55,6 @@ export function DepartmentManagement() {
 
       {/* Search + filter row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-        {/* Search */}
         <input
           type="text"
           placeholder="Search..."
@@ -76,7 +73,6 @@ export function DepartmentManagement() {
           }}
         />
 
-        {/* Filter dropdown */}
         <div style={{ position: 'relative' }}>
           <select
             value={filter}
@@ -106,40 +102,46 @@ export function DepartmentManagement() {
         </div>
       </div>
 
-      {/* Results count */}
-      <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>
-        Showing 1 to {Math.min(filtered.length, 15)} of {filtered.length} results
-      </p>
+      {/* Status */}
+      {loading && <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Cargando...</p>}
+      {error && <p style={{ fontSize: '13px', color: '#DC2626', marginBottom: '8px' }}>{error}</p>}
+      {!loading && !error && (
+        <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>
+          Showing 1 to {filtered.length} of {filtered.length} results
+        </p>
+      )}
 
-      {/* Table — no card, just white background */}
+      {/* Table */}
       <div style={{ background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #E5E7EB', background: '#FAFAFA' }}>
-              <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                NAME
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                CODDEP
-              </th>
-              <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                ACTIONS
-              </th>
+              {['NAME', 'CODDEP', 'STATUS', 'ACTIONS'].map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.slice(0, 15).map((dept, index) => (
+            {filtered.map((dept, index) => (
               <tr
                 key={dept.code}
-                style={{
-                  borderBottom: index < filtered.length - 1 ? '1px solid #F3F4F6' : 'none',
-                }}
+                style={{ borderBottom: index < filtered.length - 1 ? '1px solid #F3F4F6' : 'none' }}
               >
-                <td style={{ padding: '18px 24px', fontSize: '14px', color: '#111827' }}>
-                  {dept.name}
-                </td>
-                <td style={{ padding: '18px 24px', fontSize: '14px', color: '#111827' }}>
-                  {dept.code}
+                <td style={{ padding: '18px 24px', fontSize: '14px', color: '#111827' }}>{dept.name}</td>
+                <td style={{ padding: '18px 24px', fontSize: '14px', color: '#111827' }}>{dept.code}</td>
+                <td style={{ padding: '18px 24px' }}>
+                  <span style={{
+                    padding: '2px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: dept.is_active ? '#D1FAE5' : '#FEE2E2',
+                    color: dept.is_active ? '#065F46' : '#991B1B',
+                  }}>
+                    {dept.is_active ? 'Active' : 'Inactive'}
+                  </span>
                 </td>
                 <td style={{ padding: '18px 24px' }}>
                   <button
@@ -163,6 +165,13 @@ export function DepartmentManagement() {
                 </td>
               </tr>
             ))}
+            {!loading && filtered.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
+                  No se encontraron departamentos
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -1,4 +1,30 @@
-export function Login({ onLogin }: { onLogin: () => void }) {
+import { useState } from 'react';
+import { api, type AuthResponse } from '../lib/api';
+
+interface LoginProps {
+  onLogin: (user: AuthResponse['user']) => void;
+}
+
+export function Login({ onLogin }: LoginProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await api.post<AuthResponse>('/api/v1/auth/login', { email, password });
+      onLogin(data.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -49,96 +75,128 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           Ingresa tus credenciales para entrar
         </p>
 
-        {/* Email Field */}
-        <div style={{ marginBottom: '12px' }}>
-          <input
-            type="email"
-            placeholder="Correo electrónico"
+        <form onSubmit={handleSubmit}>
+          {/* Email Field */}
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="Correo electrónico"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '50px',
+                padding: '0 16px',
+                borderRadius: '10px',
+                border: '1.5px solid #E5E7EB',
+                backgroundColor: '#FFFFFF',
+                fontSize: '15px',
+                color: '#111111',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 150ms ease',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#111111')}
+              onBlur={e  => (e.currentTarget.style.borderColor = '#E5E7EB')}
+            />
+          </div>
+
+          {/* Password Field */}
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              id="login-password"
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '50px',
+                padding: '0 16px',
+                borderRadius: '10px',
+                border: '1.5px solid #E5E7EB',
+                backgroundColor: '#FFFFFF',
+                fontSize: '15px',
+                color: '#111111',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 150ms ease',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#111111')}
+              onBlur={e  => (e.currentTarget.style.borderColor = '#E5E7EB')}
+            />
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div
+              style={{
+                marginBottom: '14px',
+                padding: '10px 14px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '8px',
+                fontSize: '13px',
+                color: '#DC2626',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Sign In Button */}
+          <button
+            id="login-submit"
+            type="submit"
+            disabled={loading}
             style={{
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
               width: '100%',
-              height: '50px',
-              padding: '0 16px',
+              height: '52px',
               borderRadius: '10px',
-              border: '1.5px solid #E5E7EB',
-              backgroundColor: '#FFFFFF',
-              fontSize: '15px',
-              color: '#111111',
-              outline: 'none',
-              boxSizing: 'border-box',
-              transition: 'border-color 150ms ease',
+              backgroundColor: '#111111',
+              color: '#FFFFFF',
+              fontSize: '16px',
+              fontWeight: 700,
+              border: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginBottom: '14px',
+              letterSpacing: '0.1px',
+              transition: 'opacity 150ms ease',
+              opacity: loading ? 0.7 : 1,
             }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#111111')}
-            onBlur={e  => (e.currentTarget.style.borderColor = '#E5E7EB')}
-          />
-        </div>
-
-        {/* Password Field */}
-        <div style={{ marginBottom: '16px' }}>
-          <input
-            type="password"
-            placeholder="Contraseña"
-            style={{
-              display: 'block',
-              width: '100%',
-              height: '50px',
-              padding: '0 16px',
-              borderRadius: '10px',
-              border: '1.5px solid #E5E7EB',
-              backgroundColor: '#FFFFFF',
-              fontSize: '15px',
-              color: '#111111',
-              outline: 'none',
-              boxSizing: 'border-box',
-              transition: 'border-color 150ms ease',
-            }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#111111')}
-            onBlur={e  => (e.currentTarget.style.borderColor = '#E5E7EB')}
-          />
-        </div>
-
-        {/* Sign In Button */}
-        <button
-          onClick={onLogin}
-          style={{
-            display: 'block',
-            width: '100%',
-            height: '52px',
-            borderRadius: '10px',
-            backgroundColor: '#111111',
-            color: '#FFFFFF',
-            fontSize: '16px',
-            fontWeight: 700,
-            border: 'none',
-            cursor: 'pointer',
-            marginBottom: '14px',
-            letterSpacing: '0.1px',
-            transition: 'opacity 150ms ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          Iniciar Sesión
-        </button>
-
-        {/* Forgot Password */}
-        <div style={{ textAlign: 'right', marginBottom: '36px' }}>
-          <a
-            href="#"
-            style={{
-              fontSize: '13px',
-              color: '#9CA3AF',
-              textDecoration: 'none',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.88'; }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1'; }}
           >
-            Olvidé mi contraseña
-          </a>
-        </div>
+            {loading && (
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTop: '2px solid #fff',
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  animation: 'spin 0.8s linear infinite',
+                }}
+              />
+            )}
+            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+          </button>
+        </form>
+
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
         {/* Branding */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '22px' }}>
           <span style={{ fontSize: '11px', color: '#9CA3AF', letterSpacing: '0.2px' }}>powered by</span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

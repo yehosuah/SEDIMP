@@ -1,19 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api, type MetricTypeCategory } from '../lib/api';
 
 export function MetricTypeCategoryManagement() {
+  const [categories, setCategories] = useState<MetricTypeCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All Categories');
 
-  const categories = [
-    { name: 'Demografía' },
-    { name: 'Economía' },
-    { name: 'Educación' },
-    { name: 'Salud' },
-    { name: 'Infraestructura' },
-    { name: 'Desarrollo' },
-    { name: 'Tecnología' },
-    { name: 'Geografía' },
-  ];
+  const loadCategories = () => {
+    setLoading(true);
+    api.get<MetricTypeCategory[]>('/api/v1/management/metric-type-categories')
+      .then(setCategories)
+      .catch(err => setError(err instanceof Error ? err.message : 'Error al cargar categorías'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadCategories(); }, []);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
+    try {
+      await api.delete(`/api/v1/management/metric-type-categories/${id}`);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar');
+    }
+  };
 
   const filtered = categories.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -70,42 +82,14 @@ export function MetricTypeCategoryManagement() {
         />
       </div>
 
-      {/* Filter dropdown */}
-      <div style={{ position: 'relative', marginBottom: '10px', display: 'inline-block' }}>
-        <select
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          style={{
-            appearance: 'none',
-            height: '40px',
-            padding: '0 36px 0 14px',
-            border: '1px solid #E5E7EB',
-            borderRadius: '8px',
-            fontSize: '14px',
-            color: '#111827',
-            background: '#FFFFFF',
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: '160px',
-          }}
-        >
-          <option>All Categories</option>
-          <option>Active</option>
-          <option>Inactive</option>
-        </select>
-        {/* chevron */}
-        <svg
-          width="15" height="15" viewBox="0 0 24 24" fill="none"
-          style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6B7280' }}
-        >
-          <path d="M6 9l6 6 6-6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-
-      {/* Results count */}
-      <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px', display: 'block' }}>
-        Showing 1 to {filtered.length} of {filtered.length} results
-      </p>
+      {/* Status */}
+      {loading && <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Cargando...</p>}
+      {error && <p style={{ fontSize: '13px', color: '#DC2626', marginBottom: '8px' }}>{error}</p>}
+      {!loading && !error && (
+        <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px', display: 'block' }}>
+          Showing 1 to {filtered.length} of {filtered.length} results
+        </p>
+      )}
 
       {/* Table */}
       <div style={{ background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
@@ -116,6 +100,12 @@ export function MetricTypeCategoryManagement() {
                 CATEGORY NAME
               </th>
               <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                METRIC TYPES
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                STATUS
+              </th>
+              <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: '12px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                 ACTIONS
               </th>
             </tr>
@@ -123,15 +113,30 @@ export function MetricTypeCategoryManagement() {
           <tbody>
             {filtered.map((cat, i) => (
               <tr
-                key={cat.name}
+                key={cat.id}
                 style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F3F4F6' : 'none' }}
               >
                 <td style={{ padding: '18px 24px', fontSize: '14px', color: '#111827' }}>
                   {cat.name}
                 </td>
+                <td style={{ padding: '18px 24px', fontSize: '14px', color: '#6B7280' }}>
+                  {cat.metric_type_count}
+                </td>
+                <td style={{ padding: '18px 24px' }}>
+                  <span style={{
+                    padding: '2px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: cat.is_active ? '#D1FAE5' : '#FEE2E2',
+                    color: cat.is_active ? '#065F46' : '#991B1B',
+                  }}>
+                    {cat.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
                 <td style={{ padding: '18px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* EDIT — indigo outline */}
+                    {/* EDIT */}
                     <button
                       style={{
                         padding: '5px 18px',
@@ -151,8 +156,9 @@ export function MetricTypeCategoryManagement() {
                       EDIT
                     </button>
 
-                    {/* DELETE — red solid */}
+                    {/* DELETE */}
                     <button
+                      onClick={() => handleDelete(cat.id, cat.name)}
                       style={{
                         padding: '5px 18px',
                         border: 'none',
@@ -174,6 +180,13 @@ export function MetricTypeCategoryManagement() {
                 </td>
               </tr>
             ))}
+            {!loading && filtered.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px' }}>
+                  No se encontraron categorías
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
