@@ -1,0 +1,23 @@
+/* ===== index.css — entry point ===== */
+@import './styles/fonts.css';
+@import './styles/tailwind.css';
+@import './styles/theme.css';
+
+/* ===== Base resets ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
