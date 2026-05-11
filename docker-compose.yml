@@ -1,0 +1,76 @@
+services:
+  bd:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sistema_epidemiologico}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - sedimp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  bck:
+    build:
+      context: ./bck
+    environment:
+      APP_NAME: sistemaEpidemiologico API
+      ENVIRONMENT: docker
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@bd:5432/${POSTGRES_DB:-sistema_epidemiologico}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      AUTO_CREATE_MANAGER: ${AUTO_CREATE_MANAGER:-true}
+      MANAGER_EMAIL: ${MANAGER_EMAIL:-manager@example.com}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:-ChangeMe123!}
+      SEED_MUNICIPALITY_METRICS: ${SEED_MUNICIPALITY_METRICS:-true}
+      SEED_CSV_PATH: /data/municipality_metrics_wide_2026-03-10_23-09-41.csv
+    volumes:
+      - ./bd:/data:ro
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      bd:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  frt:
+    build:
+      context: ./frt/improgress
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:4173"
+    depends_on:
+      bck:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  sedimp_postgres_data:
