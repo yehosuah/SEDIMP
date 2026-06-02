@@ -1,9 +1,10 @@
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.metric_type import MetricType
 from app.models.metric_type_category import MetricTypeCategory
+from app.models.municipality_metric_value import MunicipalityMetricValue
 from app.schemas.metric_type import MetricTypeCreate, MetricTypeRead, MetricTypeUpdate
 from app.schemas.metric_type_category import (
     MetricTypeCategoryCreate,
@@ -91,6 +92,7 @@ def list_metric_types(
     category_id: str | None = None,
     search: str | None = None,
     include_inactive: bool = True,
+    with_data: bool = False,
 ) -> list[MetricTypeRead]:
     stmt = select(MetricType).join(MetricType.category).order_by(MetricType.name)
     if category_id:
@@ -100,6 +102,17 @@ def list_metric_types(
         stmt = stmt.where(or_(func.lower(MetricType.name).like(query), func.lower(MetricType.code).like(query)))
     if not include_inactive:
         stmt = stmt.where(MetricType.is_active.is_(True), MetricTypeCategory.is_active.is_(True))
+    if with_data:
+        stmt = stmt.where(
+            exists(
+                select(MunicipalityMetricValue.id)
+                .where(
+                    MunicipalityMetricValue.metric_type_code == MetricType.code,
+                    MunicipalityMetricValue.value.is_not(None),
+                )
+                .correlate(MetricType)
+            )
+        )
     return [_metric_type_read(metric_type) for metric_type in db.scalars(stmt)]
 
 

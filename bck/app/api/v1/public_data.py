@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -16,8 +16,11 @@ def list_public_departments(db: Session = Depends(get_db)):
 
 
 @router.get("/metric-types", response_model=list[MetricTypeRead])
-def list_public_metric_types(db: Session = Depends(get_db)):
-    return metrics.list_metric_types(db, include_inactive=False)
+def list_public_metric_types(
+    with_data: bool = Query(False, description="Si es true, solo devuelve tipos de métrica que tengan al menos un valor registrado."),
+    db: Session = Depends(get_db),
+):
+    return metrics.list_metric_types(db, include_inactive=False, with_data=with_data)
 
 
 @router.get("/map/departments", response_model=DepartmentMapResponse)
