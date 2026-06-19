@@ -35,6 +35,15 @@ def db_session() -> Session:
         Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    from app.core import rate_limit
+
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
+
+
 @pytest.fixture()
 def client(db_session: Session) -> TestClient:
     def override_get_db():

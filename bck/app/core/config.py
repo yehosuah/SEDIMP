@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     max_failed_logins: int = 5
     lockout_minutes: int = 15
 
+    # Basic per-key rate limiting on auth endpoints.
+    login_rate_limit: int = 10
+    login_rate_window_seconds: int = 60
+    forgot_password_rate_limit: int = 3
+    forgot_password_rate_window_seconds: int = 86_400
+
     # Password set/reset tokens delivered by email link.
     password_token_ttl_hours: int = 48
     # Base URL the email links point at (the frontend route that posts the token back).

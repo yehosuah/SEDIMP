@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.core import rate_limit
 from app.core.auth import get_current_user
 from app.core.config import settings
 from app.db.session import get_db
@@ -10,6 +11,7 @@ from app.schemas.auth import (
     EmailRequest,
     LoginRequest,
     MessageResponse,
+    PasswordChange,
     PasswordReset,
     PasswordSet,
     RefreshRequest,
@@ -55,6 +57,11 @@ def login(
 ) -> AuthResponse:
     """Autentica al usuario y emite tokens de acceso y refresco."""
     ip_address = http_request.client.host if http_request.client else None
+    rate_limit.enforce(
+        f"login:{ip_address or 'unknown'}",
+        settings.login_rate_limit,
+        settings.login_rate_window_seconds,
+    )
     auth_payload = auth_service.login(db, request.email, request.password, ip_address)
     _set_auth_cookies(response, auth_payload.access_token, auth_payload.refresh_token)
     return auth_payload
@@ -103,8 +110,24 @@ def set_password(data: PasswordSet, db: Session = Depends(get_db)) -> MessageRes
 @router.post("/password/forgot", response_model=MessageResponse, summary="Recuperar contraseña")
 def forgot_password(data: EmailRequest, db: Session = Depends(get_db)) -> MessageResponse:
     """Envía un enlace de restablecimiento si el correo existe."""
+    rate_limit.enforce(
+        f"forgot:{data.email.lower()}",
+        settings.forgot_password_rate_limit,
+        settings.forgot_password_rate_window_seconds,
+    )
     auth_service.forgot_password(db, data.email)
     return MessageResponse(message="Si el correo existe, se envió un enlace de restablecimiento.")
+
+
+@router.post("/password/change", response_model=MessageResponse, summary="Cambiar contraseña")
+def change_password(
+    data: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """Cambia la contraseña del usuario autenticado y revoca sus otras sesiones."""
+    auth_service.change_password(db, current_user, data.current_password, data.new_password)
+    return MessageResponse(message="Contraseña actualizada correctamente.")
 
 
 @router.post("/password/reset", response_model=MessageResponse, summary="Restablecer contraseña")

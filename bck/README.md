@@ -40,6 +40,7 @@ API:
 - `POST /api/v1/auth/password/set`
 - `POST /api/v1/auth/password/forgot`
 - `POST /api/v1/auth/password/reset`
+- `POST /api/v1/auth/password/change`
 - `GET /api/v1/management/users`
 - `POST /api/v1/management/users`
 - `PATCH /api/v1/management/users/{user_id}`

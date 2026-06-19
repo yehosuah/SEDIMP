@@ -108,6 +108,35 @@ def logout(db: Session, refresh_token: str | None) -> None:
         db.commit()
 
 
+def _revoke_all_refresh_tokens(db: Session, user: User) -> None:
+    """Revoke every active refresh token for a user (forces re-login elsewhere)."""
+    now = datetime.now(UTC)
+    active = db.scalars(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+    )
+    for token in active:
+        token.revoked_at = now
+
+
+def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:
+    """Change the authenticated user's password and revoke existing sessions."""
+    if not user.password_hash or not verify_password(current_password, user.password_hash):
+        raise AppError(status_code=401, message="Current password is incorrect.", code="invalid_credentials")
+    if verify_password(new_password, user.password_hash):
+        raise AppError(
+            status_code=400,
+            message="New password cannot match the current password.",
+            code="password_reuse",
+        )
+    user.password_hash = hash_password(new_password)
+    _revoke_all_refresh_tokens(db, user)
+    audit.record(db, "auth.password_changed", user_id=user.id, commit=False)
+    db.commit()
+
+
 def _apply_new_password(db: Session, user: User, new_password: str) -> None:
     if user.password_hash and verify_password(new_password, user.password_hash):
         raise AppError(

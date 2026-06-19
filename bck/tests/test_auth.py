@@ -125,3 +125,79 @@ def test_inactive_user_sets_password_and_activates(client: TestClient, db_sessio
 def test_forgot_password_is_silent_for_unknown_email(client: TestClient) -> None:
     response = client.post("/api/v1/auth/password/forgot", json={"email": "nobody@example.com"})
     assert response.status_code == 200
+
+
+def _bearer(client: TestClient, email: str, password: str) -> dict[str, str]:
+    token = client.post("/api/v1/auth/login", json={"email": email, "password": password}).json()
+    return {"Authorization": f"Bearer {token['access_token']}"}
+
+
+def test_authenticated_user_can_change_password(client: TestClient, db_session: Session) -> None:
+    create_user(db_session, "change@example.com")
+    headers = _bearer(client, "change@example.com", "Password123!")
+
+    changed = client.post(
+        "/api/v1/auth/password/change",
+        headers=headers,
+        json={"current_password": "Password123!", "new_password": "Different456!"},
+    )
+    assert changed.status_code == 200
+
+    # Old password no longer works; the new one does.
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": "change@example.com", "password": "Password123!"},
+    ).status_code == 401
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": "change@example.com", "password": "Different456!"},
+    ).status_code == 200
+
+
+def test_change_password_rejects_wrong_current(client: TestClient, db_session: Session) -> None:
+    create_user(db_session, "change2@example.com")
+    headers = _bearer(client, "change2@example.com", "Password123!")
+
+    response = client.post(
+        "/api/v1/auth/password/change",
+        headers=headers,
+        json={"current_password": "WRONG", "new_password": "Different456!"},
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] == "invalid_credentials"
+
+
+def test_change_password_revokes_existing_refresh_tokens(client: TestClient, db_session: Session) -> None:
+    create_user(db_session, "revoke@example.com")
+    session = client.post(
+        "/api/v1/auth/login",
+        json={"email": "revoke@example.com", "password": "Password123!"},
+    ).json()
+
+    client.post(
+        "/api/v1/auth/password/change",
+        headers={"Authorization": f"Bearer {session['access_token']}"},
+        json={"current_password": "Password123!", "new_password": "Different456!"},
+    )
+
+    # The refresh token issued before the change is now revoked.
+    refreshed = client.post("/api/v1/auth/refresh", json={"refresh_token": session["refresh_token"]})
+    assert refreshed.status_code == 401
+
+
+def test_login_is_rate_limited_per_ip(client: TestClient) -> None:
+    # Unknown email avoids account lockout; only the IP rate limit applies.
+    for _ in range(settings.login_rate_limit):
+        client.post("/api/v1/auth/login", json={"email": "ghost@example.com", "password": "x"})
+
+    limited = client.post("/api/v1/auth/login", json={"email": "ghost@example.com", "password": "x"})
+    assert limited.status_code == 429
+    assert limited.json()["code"] == "rate_limited"
+
+
+def test_forgot_password_is_rate_limited_per_email(client: TestClient) -> None:
+    for _ in range(settings.forgot_password_rate_limit):
+        client.post("/api/v1/auth/password/forgot", json={"email": "spam@example.com"})
+
+    limited = client.post("/api/v1/auth/password/forgot", json={"email": "spam@example.com"})
+    assert limited.status_code == 429
