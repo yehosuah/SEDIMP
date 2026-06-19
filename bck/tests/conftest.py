@@ -11,9 +11,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
+from app.db.seed import ensure_roles
 from app.db.session import get_db
 from app.main import app
-from app.models import department, metric_type, metric_type_category, municipality, municipality_metric_value, public_screen, refresh_token, user  # noqa: F401
+from app.models import audit_log, department, metric_type, metric_type_category, municipality, municipality_metric_value, public_screen, refresh_token, role, user  # noqa: F401
 
 
 @pytest.fixture()
@@ -26,6 +27,7 @@ def db_session() -> Session:
     Base.metadata.create_all(bind=engine)
     TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
     db = TestingSession()
+    ensure_roles(db)
     try:
         yield db
     finally:

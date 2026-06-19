@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_manager
+from app.core.auth import require_roles
+from app.models.role import ROLE_ADMIN, ROLE_EDITOR
 from app.db.session import get_db
 from app.schemas.imports import (
     ImportTemplate,
@@ -12,7 +13,7 @@ from app.schemas.imports import (
 )
 from app.services import imports
 
-router = APIRouter(dependencies=[Depends(require_manager())])
+router = APIRouter(dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_EDITOR))])
 
 
 @router.get("/imports/municipality-data/template", response_model=ImportTemplate)

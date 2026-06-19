@@ -40,11 +40,11 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return secrets.compare_digest(candidate, digest)
 
 
-def create_access_token(subject: str, is_manager: bool) -> str:
+def create_access_token(subject: str, role: str) -> str:
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": subject,
-        "is_manager": is_manager,
+        "role": role,
         "iat": now,
         "exp": now + timedelta(minutes=settings.access_token_ttl_minutes),
         "type": "access",
@@ -60,6 +60,33 @@ def decode_access_token(token: str) -> dict[str, Any]:
     if payload.get("type") != "access":
         raise ValueError("Invalid token type.")
     return payload
+
+
+def create_purpose_token(subject: str, purpose: str) -> str:
+    """Short-lived signed token used for password set/reset email links."""
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "purpose": purpose,
+        "iat": now,
+        "exp": now + timedelta(hours=settings.password_token_ttl_hours),
+        "type": "purpose",
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def decode_purpose_token(token: str, expected_purpose: str) -> str:
+    """Return the subject of a purpose token, or raise ValueError if invalid."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError as exc:
+        raise ValueError("Invalid token.") from exc
+    if payload.get("type") != "purpose" or payload.get("purpose") != expected_purpose:
+        raise ValueError("Invalid token purpose.")
+    subject = payload.get("sub")
+    if not subject:
+        raise ValueError("Invalid token subject.")
+    return subject
 
 
 def generate_refresh_token() -> str:

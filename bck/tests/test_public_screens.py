@@ -1,26 +1,12 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, hash_password
-from app.models.user import User
-
-
-def create_user(db: Session, email: str, is_manager: bool) -> User:
-    user = User(
-        email=email,
-        password_hash=hash_password("Password123!"),
-        is_manager=is_manager,
-        is_active=True,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+from tests.factories import auth_token, create_user
 
 
 def manager_token(db: Session) -> str:
-    manager = create_user(db, "manager@example.com", is_manager=True)
-    return create_access_token(manager.id, manager.is_manager)
+    manager = create_user(db, "manager@example.com", role="admin")
+    return auth_token(manager)
 
 
 def test_public_endpoint_returns_only_enabled_screens(
@@ -59,8 +45,8 @@ def test_unauthenticated_user_cannot_manage_screens(client: TestClient) -> None:
 
 
 def test_non_manager_cannot_manage_screens(client: TestClient, db_session: Session) -> None:
-    user = create_user(db_session, "viewer@example.com", is_manager=False)
-    token = create_access_token(user.id, user.is_manager)
+    user = create_user(db_session, "viewer@example.com", role="visor")
+    token = auth_token(user)
 
     response = client.post(
         "/api/v1/management/screens",

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_manager
+from app.core.auth import require_roles
+from app.models.role import ROLE_ADMIN, ROLE_EDITOR
 from app.db.session import get_db
 from app.schemas.metric_type import MetricTypeCreate, MetricTypeRead, MetricTypeUpdate
 from app.schemas.metric_type_category import (
@@ -11,7 +12,7 @@ from app.schemas.metric_type_category import (
 )
 from app.services import metrics
 
-router = APIRouter(dependencies=[Depends(require_manager())])
+router = APIRouter(dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_EDITOR))])
 
 
 @router.get("/metric-type-categories", response_model=list[MetricTypeCategoryRead])
