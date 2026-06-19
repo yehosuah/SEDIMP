@@ -1,21 +1,12 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, hash_password
-from app.models.user import User
+from tests.factories import auth_token, create_user
 
 
 def create_manager(db: Session) -> str:
-    manager = User(
-        email="improgress-manager@example.com",
-        password_hash=hash_password("Password123!"),
-        is_manager=True,
-        is_active=True,
-    )
-    db.add(manager)
-    db.commit()
-    db.refresh(manager)
-    return create_access_token(manager.id, manager.is_manager)
+    manager = create_user(db, "improgress-manager@example.com", role="admin")
+    return auth_token(manager)
 
 
 def test_department_management_crud_and_public_map_data(

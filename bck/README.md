@@ -37,6 +37,15 @@ API:
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+- `POST /api/v1/auth/password/set`
+- `POST /api/v1/auth/password/forgot`
+- `POST /api/v1/auth/password/reset`
+- `POST /api/v1/auth/password/change`
+- `GET /api/v1/management/users`
+- `POST /api/v1/management/users`
+- `PATCH /api/v1/management/users/{user_id}`
+- `GET /api/v1/management/roles`
+- `GET /api/v1/management/audit-logs`
 - `GET /api/v1/public/screens`
 - `GET /api/v1/public/departments`
 - `GET /api/v1/public/metric-types`
@@ -61,9 +70,18 @@ API:
 
 ## Access Model
 
-Roles are intentionally not part of this backend.
+The backend uses role-based access control (RBAC) with three roles:
 
-Public visitors do not need accounts. Manager accounts are the only authenticated users in v1, and every manager can access all protected management activities.
+- `admin` — full control, including user administration and audit logs.
+- `editor` — uploads data and creates/edits/publishes domain records.
+- `visor` — authenticated read-only access for analysis.
+
+Authorization is enforced per route via `require_roles(...)`; `admin` always
+passes. Public visitors do not need accounts. New users are created inactive by
+an admin and activate their account by setting a password through an emailed
+invitation link (`POST /auth/password/set`). Failed logins are rate-limited with
+temporary account lockout, and security/data-mutation events are written to the
+audit log.
 
 Public screen availability is stored in the database. The public API returns only enabled screens; managers can create and toggle all screen records.
 

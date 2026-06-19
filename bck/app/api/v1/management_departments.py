@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_manager
+from app.core.auth import require_roles
+from app.models.role import ROLE_ADMIN, ROLE_EDITOR
 from app.db.session import get_db
 from app.schemas.department import DepartmentCreate, DepartmentRead, DepartmentUpdate
 from app.services import departments
 
-router = APIRouter(dependencies=[Depends(require_manager())])
+router = APIRouter(dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_EDITOR))])
 
 
 @router.get("/departments", response_model=list[DepartmentRead])
