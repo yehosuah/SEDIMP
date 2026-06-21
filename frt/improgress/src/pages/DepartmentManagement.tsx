@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { api, type Department } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export function DepartmentManagement() {
+  const { user } = useAuth();
+  const canEdit = user?.role.name === 'admin' || user?.role.name === 'editor';
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,24 +36,26 @@ export function DepartmentManagement() {
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: 0 }}>
           Department Management
         </h1>
-        <button
-          style={{
-            backgroundColor: '#111827',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            letterSpacing: '0.3px',
-            transition: 'opacity 150ms ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          ADD NEW DEPARTMENT
-        </button>
+        {canEdit && (
+          <button
+            style={{
+              backgroundColor: '#111827',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              letterSpacing: '0.3px',
+              transition: 'opacity 150ms ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            ADD NEW DEPARTMENT
+          </button>
+        )}
       </div>
 
       {/* Search + filter row */}
@@ -144,24 +149,28 @@ export function DepartmentManagement() {
                   </span>
                 </td>
                 <td style={{ padding: '18px 24px' }}>
-                  <button
-                    style={{
-                      padding: '5px 18px',
-                      border: '1.5px solid #6366F1',
-                      borderRadius: '6px',
-                      background: 'transparent',
-                      color: '#6366F1',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'background 120ms ease',
-                      letterSpacing: '0.2px',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    EDIT
-                  </button>
+                  {canEdit ? (
+                    <button
+                      style={{
+                        padding: '5px 18px',
+                        border: '1.5px solid #6366F1',
+                        borderRadius: '6px',
+                        background: 'transparent',
+                        color: '#6366F1',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background 120ms ease',
+                        letterSpacing: '0.2px',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      EDIT
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Solo lectura</span>
+                  )}
                 </td>
               </tr>
             ))}

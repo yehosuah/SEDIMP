@@ -75,11 +75,65 @@ export interface ImportTemplate {
   records: Record<string, unknown>[];
 }
 
+export interface Role {
+  id: number;
+  name: 'admin' | 'editor' | 'visor';
+  description: string | null;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: Role;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  user: { id: string; email: string; is_manager: boolean; is_active: boolean };
+  user: User;
+}
+
+export interface AuditLogRead {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  detail: string | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface UserCreate {
+  email: string;
+  full_name?: string | null;
+  role_id: number;
+}
+
+export interface UserUpdate {
+  full_name?: string | null;
+  role_id?: number;
+  is_active?: boolean;
+}
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  errors?: unknown[];
+
+  constructor(message: string, status: number, code?: string, errors?: unknown[]) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.errors = errors;
+  }
 }
 
 // ── Core fetch wrapper ───────────────────────────────────────────────────────
@@ -96,13 +150,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
+    let code: string | undefined;
+    let errors: unknown[] | undefined;
     try {
       const body = await res.json();
-      message = body?.detail ?? message;
+      message = body?.message ?? body?.detail ?? message;
+      code = body?.code;
+      errors = body?.errors;
     } catch {
       // ignore parse errors
     }
-    throw new Error(message);
+    throw new ApiError(message, res.status, code, errors);
   }
 
   if (res.status === 204) return undefined as T;

@@ -84,11 +84,13 @@ export function GeographicMap() {
   // Carga datos del mapa cuando cambia la métrica seleccionada
   useEffect(() => {
     const params = selectedMetric ? `?metric_code=${selectedMetric.code}` : '';
-    setLoadingMap(true);
-    api.get<DepartmentMapResponse>(`/api/v1/public/map/departments${params}`)
-      .then(res => setMapData(res.departments))
-      .catch(err => setError(err instanceof Error ? err.message : 'Error'))
-      .finally(() => setLoadingMap(false));
+    Promise.resolve().then(() => {
+      setLoadingMap(true);
+      api.get<DepartmentMapResponse>(`/api/v1/public/map/departments${params}`)
+        .then(res => setMapData(res.departments))
+        .catch(err => setError(err instanceof Error ? err.message : 'Error'))
+        .finally(() => setLoadingMap(false));
+    });
   }, [selectedMetric]);
 
   // Índice de datos por nombre normalizado

@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { api, type MetricType, type MetricTypeCategory } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export function MetricTypeManagement() {
+  const { user } = useAuth();
+  const canEdit = user?.role.name === 'admin' || user?.role.name === 'editor';
   const [metricTypes, setMetricTypes] = useState<MetricType[]>([]);
   const [categories, setCategories] = useState<MetricTypeCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,13 +61,15 @@ export function MetricTypeManagement() {
         </h1>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            style={outlineBtn}
-            onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            IMPORT METRIC TYPES
-          </button>
+          {canEdit && (
+            <button
+              style={outlineBtn}
+              onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              IMPORT METRIC TYPES
+            </button>
+          )}
           <button
             style={outlineBtn}
             onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
@@ -72,26 +77,28 @@ export function MetricTypeManagement() {
           >
             METRIC TYPE CATEGORIES
           </button>
-          <button
-            style={{
-              height: '38px',
-              padding: '0 18px',
-              border: 'none',
-              borderRadius: '8px',
-              background: '#111827',
-              color: '#FFFFFF',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              letterSpacing: '0.2px',
-              transition: 'opacity 120ms ease',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            ADD NEW METRICTYPE
-          </button>
+          {canEdit && (
+            <button
+              style={{
+                height: '38px',
+                padding: '0 18px',
+                border: 'none',
+                borderRadius: '8px',
+                background: '#111827',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.2px',
+                transition: 'opacity 120ms ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              ADD NEW METRICTYPE
+            </button>
+          )}
         </div>
       </div>
 

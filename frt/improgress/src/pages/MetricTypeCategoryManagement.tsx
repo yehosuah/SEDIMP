@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api, type MetricTypeCategory } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export function MetricTypeCategoryManagement() {
+  const { user } = useAuth();
+  const canEdit = user?.role.name === 'admin' || user?.role.name === 'editor';
   const [categories, setCategories] = useState<MetricTypeCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,7 +18,11 @@ export function MetricTypeCategoryManagement() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadCategories();
+    });
+  }, []);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
@@ -39,25 +46,27 @@ export function MetricTypeCategoryManagement() {
         <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#111827', margin: 0 }}>
           MetricTypeCategory Management
         </h1>
-        <button
-          style={{
-            height: '38px',
-            padding: '0 18px',
-            border: 'none',
-            borderRadius: '8px',
-            background: '#111827',
-            color: '#FFFFFF',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            letterSpacing: '0.2px',
-            transition: 'opacity 120ms ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          ADD NEW METRICTYPECATEGORY
-        </button>
+        {canEdit && (
+          <button
+            style={{
+              height: '38px',
+              padding: '0 18px',
+              border: 'none',
+              borderRadius: '8px',
+              background: '#111827',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              letterSpacing: '0.2px',
+              transition: 'opacity 120ms ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            ADD NEW METRICTYPECATEGORY
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -135,48 +144,52 @@ export function MetricTypeCategoryManagement() {
                   </span>
                 </td>
                 <td style={{ padding: '18px 24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* EDIT */}
-                    <button
-                      style={{
-                        padding: '5px 18px',
-                        border: '1.5px solid #6366F1',
-                        borderRadius: '6px',
-                        background: 'transparent',
-                        color: '#6366F1',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        letterSpacing: '0.2px',
-                        transition: 'background 120ms ease',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      EDIT
-                    </button>
+                  {canEdit ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {/* EDIT */}
+                      <button
+                        style={{
+                          padding: '5px 18px',
+                          border: '1.5px solid #6366F1',
+                          borderRadius: '6px',
+                          background: 'transparent',
+                          color: '#6366F1',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          letterSpacing: '0.2px',
+                          transition: 'background 120ms ease',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#EEF2FF')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        EDIT
+                      </button>
 
-                    {/* DELETE */}
-                    <button
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      style={{
-                        padding: '5px 18px',
-                        border: 'none',
-                        borderRadius: '6px',
-                        background: '#EF4444',
-                        color: '#FFFFFF',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        letterSpacing: '0.2px',
-                        transition: 'opacity 120ms ease',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                    >
-                      DELETE
-                    </button>
-                  </div>
+                      {/* DELETE */}
+                      <button
+                        onClick={() => handleDelete(cat.id, cat.name)}
+                        style={{
+                          padding: '5px 18px',
+                          border: 'none',
+                          borderRadius: '6px',
+                          background: '#EF4444',
+                          color: '#FFFFFF',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          letterSpacing: '0.2px',
+                          transition: 'opacity 120ms ease',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      >
+                        DELETE
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Solo lectura</span>
+                  )}
                 </td>
               </tr>
             ))}
